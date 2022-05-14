@@ -1,0 +1,342 @@
+---
+title: "06_Forecasting"
+author: "Callum Weinberg"
+date: "December 2, 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+
+```{r}
+library(dplyr, warn.conflicts = FALSE) #Using
+library(tidyr) #Using
+library(knitr) #Using
+library(lubridate, warn.conflicts = FALSE) #Using
+library(ggplot2) #Using
+library(MASS) #Uncertain
+library(qpcR) #Using
+library(forecast) #Using
+library(cowplot) #Using
+library(TSA) #Using
+```
+
+
+###### SEASON ONLY MODEL #####
+
+```{r}
+load(file="Data/landings_transformed_season_only.Rdata")
+landing_ts_so = landings_transformed_season_only$pounds_transformed
+
+load(file="Data/landings.Rdata")
+landings_ts = landings$pounds
+```
+
+# Used in the Report #
+```{r forecast}
+# Model 43 - Model Chosen for Forecasting Final Report. Corresponds to Model 3 of the report.
+model43 = arima(landings_ts, order=c(1,0,1), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(NA,NA,NA,NA))
+model43
+AICc(model43)
+
+# Perform Prediction
+mypred = predict(model43, n.ahead=12, se.fit = TRUE)
+#mypred = forecast(model40,h=12, level=c(95))
+
+# Code from Lecture Notes, doing with GGPLOT instead
+#ts.plot(landings, xlim=c(0,144), ylim=c(-300000,900000))
+#points(133:144,mypred$pred)
+#lines(133:144,mypred$pred+1.96*mypred$se,lty=2)
+#lines(133:144,mypred$pred-1.96*mypred$se,lty=2)
+
+
+# Update the Full Dataset with the data for the 12 predicted rows
+#landings_forecast = landings
+landings_pred_2019 = data.frame(Year = rep(2019,12),
+                                Month = seq(1,12,by=1),
+                                pounds = mypred$pred,
+                                upper = mypred$pred+1.96*mypred$se,
+                                lower = mypred$pred-1.96*mypred$se,
+                                pounds.bc = rep(NA,12))
+
+landings_pred_2019$date =  as.Date(with(landings_pred_2019, 
+                                paste0(as.character(landings_pred_2019$Year),"-",
+                                as.character(landings_pred_2019$Month),"-01"), "%Y-%m-%d"))
+
+
+## Plot the Original Data with the Forecast
+forecast_plot = ggplot() +
+  geom_line(data = landings_full, mapping = aes(x = date, y = pounds/1000)) +
+  geom_line(data = landings_pred_2019, mapping = aes(x = date, y = pounds/1000), color = "red", linetype = "dashed") +
+  geom_line(data = landings_pred_2019, mapping = aes(x = date, y = upper/1000), color = "blue", linetype = "twodash", size = .8) +
+  geom_line(data = landings_pred_2019, mapping = aes(x = date, y = lower/1000), color = "blue", linetype = "twodash", size = .8) +
+  labs(x = "Date", y = "Thousands of Pounds") +
+  scale_x_date(breaks = scales::breaks_pretty(15)) +
+  scale_y_continuous(limits = c(-500,900)) +
+  theme(text = element_text(size = 20),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.width=unit(1,"cm"),
+    axis.text.y = element_text(angle=90, hjust=1, size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title=element_text(size=10,face="bold"))
+forecast_plot
+
+# Plot Forecast
+#png(filename = "Images/forecast.png", width = 960, height = 480)
+forecast_plot
+#dev.off()
+```
+
+
+
+# Not Used in the Report #
+```{r forecast}
+# Model 40 - Not Used in Final Report
+model40 = Arima(landings_ts, order=c(2,0,2), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(NA,NA,0,NA,NA,NA))
+model40
+AICc(model40)
+
+# Perform Prediction
+mypred = predict(model40, n.ahead=12)
+#mypred = forecast(model40,h=12, level=c(95))
+
+# Code from Lecture Notes, doing with GGPLOT instead
+#ts.plot(landings, xlim=c(0,144), ylim=c(-300000,900000))
+#points(133:144,mypred$pred)
+#lines(133:144,mypred$pred+1.96*mypred$se,lty=2)
+#lines(133:144,mypred$pred-1.96*mypred$se,lty=2)
+
+
+# Update the Full Dataset with the data for the 12 predicted rows
+#landings_forecast = landings
+landings_pred_2019 = data.frame(Year = rep(2019,12),
+                                Month = seq(1,12,by=1),
+                                pounds = mypred$pred,
+                                pounds.bc = rep(NA,12))
+
+landings_pred_2019$date =  as.Date(with(landings_pred_2019, 
+                                paste0(as.character(landings_pred_2019$Year),"-",
+                                as.character(landings_pred_2019$Month),"-01"), "%Y-%m-%d"))
+
+landings_forecast = rbind(landings,landings_pred_2019)
+
+
+
+## Plot the Original Data with the Forecast
+forecast_plot = ggplot(data = landings_forecast, mapping = aes(x = date, y = pounds/1000)) +
+  geom_line() +
+  labs(x = "Date", y = "Thousands of Pounds", title = "Forecast") +
+  scale_x_date(breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(limits = c(-200,900)) +
+  theme(text = element_text(size = 20),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.width=unit(1,"cm"),
+    axis.text.y = element_text(angle=90, hjust=1, size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title=element_text(size=10,face="bold"))
+forecast_plot
+
+
+## Plot the Actual Data
+load(file="Data/landings_full.Rdata")
+full_plot = ggplot(data = landings_full, mapping = aes(x = date, y = pounds/1000)) +
+  geom_line() +
+  labs(x = "Date", y = "Thousands of Pounds", title = "Actual Data") +
+  scale_x_date(breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(limits = c(-200,900)) +
+  theme(text = element_text(size = 20),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.width=unit(1,"cm"),
+    axis.text.y = element_text(angle=90, hjust=1, size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title=element_text(size=10,face="bold"))
+full_plot
+
+
+
+```
+
+# Not Used in the Report #
+```{r forecast}
+# Model 44
+model44 = arima(landing_ts_so, order=c(2,0,3), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(0,NA,0,0,NA,NA,NA))
+model44
+AICc(model44)
+
+# Perform Prediction
+mypred = predict(model44, n.ahead=12)
+#mypred = forecast(model40,h=12, level=c(95))
+
+# Code from Lecture Notes, doing with GGPLOT instead
+#ts.plot(landings, xlim=c(0,144), ylim=c(-300000,900000))
+#points(133:144,mypred$pred)
+#lines(133:144,mypred$pred+1.96*mypred$se,lty=2)
+#lines(133:144,mypred$pred-1.96*mypred$se,lty=2)
+
+
+# Update the Full Dataset with the data for the 12 predicted rows
+#landings_forecast = landings
+landings_pred_2019 = data.frame(Year = rep(2019,12),
+                                Month = seq(1,12,by=1),
+                                pounds = mypred$pred,
+                                pounds.bc = rep(NA,12))
+
+landings_pred_2019$date =  as.Date(with(landings_pred_2019, 
+                                paste0(as.character(landings_pred_2019$Year),"-",
+                                as.character(landings_pred_2019$Month),"-01"), "%Y-%m-%d"))
+
+landings_forecast = rbind(landings,landings_pred_2019)
+
+
+
+## Plot the Original Data with the Forecast
+forecast_plot = ggplot(data = landings_forecast, mapping = aes(x = date, y = pounds/1000)) +
+  geom_line() +
+  labs(x = "Date", y = "Thousands of Pounds", title = "Forecast") +
+  scale_x_date(breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(limits = c(-200,900)) +
+  theme(text = element_text(size = 20),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.width=unit(1,"cm"),
+    axis.text.y = element_text(angle=90, hjust=1, size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title=element_text(size=10,face="bold"))
+forecast_plot
+
+
+## Plot the Actual Data
+load(file="Data/landings_full.Rdata")
+full_plot = ggplot(data = landings_full, mapping = aes(x = date, y = pounds/1000)) +
+  geom_line() +
+  labs(x = "Date", y = "Thousands of Pounds", title = "Actual Data") +
+  scale_x_date(breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(limits = c(-200,900)) +
+  theme(text = element_text(size = 20),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.width=unit(1,"cm"),
+    axis.text.y = element_text(angle=90, hjust=1, size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title=element_text(size=10,face="bold"))
+full_plot
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### TREND ONLY MODEL - Not used in the Report #####
+
+## Load the Trend-Only Differenced Data
+
+```{r}
+load(file="Data/landings_transformed_no_season.Rdata")
+landing_ts_ns = landings_transformed_no_season$pounds_transformed
+```
+
+
+## Forecast Model 22
+
+```{r}
+# Rerun the Model (defined in 04)
+model22 = arima(landing_ts_ns, order=c(15,1,0), method = "ML")
+model22
+AICc(model22)
+
+# Perform Prediction
+mypred = predict(model22, n.ahead=12)
+
+# Code from Lecture Notes, doing with GGPLOT instead
+#ts.plot(landings, xlim=c(0,144), ylim=c(-300000,900000))
+#points(133:144,mypred$pred)
+#lines(133:144,mypred$pred+1.96*mypred$se,lty=2)
+#lines(133:144,mypred$pred-1.96*mypred$se,lty=2)
+
+
+# Update the Full Dataset with the data for the 12 predicted rows
+#landings_forecast = landings
+landings_pred_2019 = data.frame(Year = rep(2019,12),
+                                Month = seq(1,12,by=1),
+                                pounds = mypred$pred,
+                                pounds.bc = rep(NA,12))
+
+landings_pred_2019$date =  as.Date(with(landings_pred_2019, 
+                                paste0(as.character(landings_pred_2019$Year),"-",
+                                as.character(landings_pred_2019$Month),"-01"), "%Y-%m-%d"))
+
+landings_forecast = rbind(landings,landings_pred_2019)
+
+
+
+## Plot the Original Data with the Forecast
+forecast_plot = ggplot(data = landings_forecast, mapping = aes(x = date, y = pounds/1000)) +
+  geom_line() +
+  labs(x = "Date", y = "Thousands of Pounds", title = "Forecast") +
+  scale_x_date(breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(limits = c(-100,900)) +
+  theme(text = element_text(size = 20),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.width=unit(1,"cm"),
+    axis.text.y = element_text(angle=90, hjust=1, size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title=element_text(size=10,face="bold"))
+forecast_plot
+
+
+## Plot the Actual Data
+load(file="Data/landings_full.Rdata")
+full_plot = ggplot(data = landings_full, mapping = aes(x = date, y = pounds/1000)) +
+  geom_line() +
+  labs(x = "Date", y = "Thousands of Pounds", title = "Actual Data") +
+  scale_x_date(breaks = scales::breaks_pretty(10)) +
+  scale_y_continuous(limits = c(-100,900)) +
+  theme(text = element_text(size = 20),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.width=unit(1,"cm"),
+    axis.text.y = element_text(angle=90, hjust=1, size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title=element_text(size=10,face="bold"))
+full_plot
+
+```
+
+```

@@ -1,0 +1,434 @@
+---
+title: "04_Fitting_Models"
+author: "Callum Weinberg"
+date: "December 1, 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+
+```{r}
+library(dplyr, warn.conflicts = FALSE) #Using
+library(tidyr) #Using
+library(knitr) #Using
+library(lubridate, warn.conflicts = FALSE) #Using
+library(ggplot2) #Using
+library(MASS) #Uncertain
+library(qpcR) #Using
+library(forecast) #Using
+library(cowplot) #Using
+library(TSA) #Using
+```
+
+
+
+###### MODEL WITH ONLY SEASONAL DIFFERENCE (Lag 12) #######
+
+ Originlly setting D = 1 forthe differenced data. This was incorrect in the original report, needed to be D = 0 since it was already differenced (the arima() function performs the differencing if D != 0)
+```{r}
+load(file="Data/landings_transformed_season_only.Rdata")
+landing_ts_so = landings_transformed_season_only$pounds_transformed
+
+load(file="Data/landings.Rdata")
+landings_ts = landings$pounds
+```
+
+## Model 40
+```{r}
+model40 = arima(landings_ts, order=c(2,0,2), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(NA,NA,0,NA,NA,NA))
+model40
+AICc(model40)
+
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,-.2099,-.7849))
+AR_df = data.frame(Root = c("AR1","AR2"),
+                   real = Re(AR), im = Im(AR))
+AR_df = 
+  AR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest AR Root on Complex Plane: ",min(AR_df$z))
+
+# Theta (Corresponding to MA)
+MA = polyroot(c(1,0,-0.8638))
+MA_df = data.frame(Root = c("MA1","MA2"),
+                   real = Re(MA), im = Im(MA))
+MA_df = 
+  MA_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest MA Root on Complex Plane: ",min(MA_df$z))
+
+# PHI (corresponsing to SAR)
+SAR = polyroot(c(1,-0.0408))
+SAR_df = data.frame(Root = c("SAR1"),
+                   real = Re(SAR), im = Im(SAR))
+SAR_df = 
+  SAR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest SAR Root on Complex Plane: ",min(SAR_df$z))
+
+# THETA (Corresponding to SMA)
+SMA = polyroot(c(1,-0.8901))
+SMA_df = data.frame(Root = c("SMA1"),
+                   real = Re(SMA), im = Im(SMA))
+SMA_df = 
+  SMA_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest SMA Root on Complex Plane: ",min(SMA_df$z))
+
+kable(rbind(AR_df,MA_df,SAR_df,SMA_df), caption = "Phi(B) Roots and Theta(B) Roots")
+```
+
+# Model 41
+
+```{r}
+model41 = arima(landings_ts, order=c(2,0,2), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(NA,NA,NA,NA,NA,NA))
+model41
+AICc(model41)
+
+
+# Phi (corresponsing to AR)
+#AR = polyroot(c(1,0.5245,-0.5261,-0.9983)) for 303 x 111
+AR = polyroot(c(1,-.1195,-.8804))
+AR_df = data.frame(Root = c("AR1","AR2"),
+                   real = Re(AR), im = Im(AR))
+AR_df = 
+  AR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest AR Root on Complex Plane: ",min(AR_df$z))
+
+
+# MA = polyroot(c(1,-.6319,0.3399,.8839))  for 303 x 111
+MA = polyroot(c(1,0,0.8638))
+MA_df = data.frame(Root = c("MA1","MA2"),
+                   real = Re(MA), im = Im(MA))
+MA_df = 
+  MA_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest MA Root on Complex Plane: ",min(MA_df$z))
+
+kable(rbind(AR_df,MA_df), caption = "Phi(B) Roots and Theta(B) Roots")
+```
+
+
+## Model 42
+```{r}
+model42 = arima(landing_ts_so, order=c(3,0,3), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(NA,NA,0,NA,NA,NA,NA,NA))
+model42
+AICc(model42)
+
+# Theta_1 = 1, not invertible
+```
+
+
+# Model 43
+
+```{r}
+# Model 43
+model43 = arima(landings_ts, order=c(1,0,1), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(NA,NA,NA,NA))
+model43
+AICc(model43)
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,-0.9970))
+AR_df = data.frame(Root = c("AR1"),
+                   real = Re(AR), im = Im(AR))
+AR_df = 
+  AR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest AR Root on Complex Plane: ",min(AR_df$z))
+
+
+# Theta (corresponding to MA)
+MA = polyroot(c(1,-0.7925))
+MA_df = data.frame(Root = c("MA1"),
+                   real = Re(MA), im = Im(MA))
+MA_df = 
+  MA_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest MA Root on Complex Plane: ",min(MA_df$z))
+
+# PHI (corresponsing to SAR)
+SAR = polyroot(c(1,-.0417))
+SAR_df = data.frame(Root = c("SAR1"),
+                   real = Re(SAR), im = Im(SAR))
+SAR_df = 
+  SAR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest SAR Root on Complex Plane: ",min(SAR_df$z))
+
+# THETA (Corresponding to SMA)
+SMA = polyroot(c(1,-0.8909))
+SMA_df = data.frame(Root = c("SMA1"),
+                   real = Re(SMA), im = Im(SMA))
+SMA_df = 
+  SMA_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest SMA Root on Complex Plane: ",min(SMA_df$z))
+
+kable(rbind(AR_df,MA_df,SAR_df,SMA_df), caption = "Phi(B) Roots and Theta(B) Roots")
+
+# Stationary and Invertible, although the ar1 term is only just stationary
+```
+
+# Model 44
+
+```{r}
+model44 = arima(landings_ts, order=c(2,0,3), seasonal = list(order = c(1,1,1), period = 12), 
+                method = "ML",fixed = c(0,NA,0,0,NA,NA,NA))
+model44
+AICc(model44)
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,0,-0.3778))
+AR_df = data.frame(Root = c("AR1","AR2"),
+                   real = Re(AR), im = Im(AR))
+AR_df = 
+  AR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest AR Root on Complex Plane: ",min(AR_df$z))
+
+# Theta (corresponding to MA)
+MA = polyroot(c(1,0,0,0.3506))
+MA_df = data.frame(Root = c("MA1","MA2","MA3"),
+                   real = Re(MA), im = Im(MA))
+MA_df = 
+  MA_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest MA Root on Complex Plane: ",min(MA_df$z))
+
+# PHI (corresponsing to SAR)
+SAR = polyroot(c(1,0.1782))
+SAR_df = data.frame(Root = c("SAR1"),
+                   real = Re(SAR), im = Im(SAR))
+SAR_df = 
+  SAR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest SAR Root on Complex Plane: ",min(SAR_df$z))
+
+# THETA (Corresponding to SMA)
+SMA = polyroot(c(1,-0.3802))
+SMA_df = data.frame(Root = c("SMA1"),
+                   real = Re(SMA), im = Im(SMA))
+SMA_df = 
+  SMA_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest SMA Root on Complex Plane: ",min(SMA_df$z))
+
+kable(rbind(AR_df,MA_df,SAR_df,SMA_df), caption = "Phi(B) Roots and Theta(B) Roots")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### MODELS WITH SEASONAL DIFFERENCE AND TREND DIFFERENCE
+
+
+## NOT USED IN THE REPORT
+
+```{r}
+load(file="Data/landings_transformed.Rdata")
+landing_ts = landings_transformed$pounds_transformed
+```
+
+## 0 Model
+
+SARIMA (1,1,0)x(1,1,0) 12
+
+This is viable: seems not great based on the PACF, but not sure
+```{r}
+model0 = arima(landing_ts, order=c(1,1,0), seasonal = list(order = c(1,1,0), period = 12), method = "ML")
+model0
+AICc(model0)
+
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,-0.7046))
+roots_AR = c("Root 1")
+root_model0 = data.frame(Root = roots_AR, Value = AR)
+kable(root_model0, caption = "Phi(B) Roots")
+```
+
+# Model 1
+
+Double Check Stationarity
+```{r}
+model1 = arima(landing_ts, order=c(2,1,0), seasonal = list(order = c(1,1,0), period = 12), method = "ML")
+model1
+AICc(model1)
+
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,1.1017,.5427))
+roots_AR = c("Root 1", "Root 2")
+root_model1 = data.frame(Root = roots_AR, Value = AR)
+kable(root_model1, caption = "Phi(B) Roots")
+```
+
+
+# Model 2
+
+SARIMA (3,1,0)x(1,1,0) 12
+
+NON-STATIONARY: Non complex roots less than 1
+```{r}
+model2 = arima(landing_ts, order=c(3,1,0), seasonal = list(order = c(1,1,0), period = 12), method = "ML")
+model2
+AICc(model2)
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,1.3384,1.0118,.4160))
+roots_AR = c("Root 1", "Root 2","Root 3")
+root_model2 = data.frame(Root = roots_AR, Value = AR)
+kable(root_model2, caption = "Phi(B) Roots")
+```
+
+
+# Model 3
+
+SARIMA (14,1,0)x(0,1,0) 12
+
+NON-STATIONARY: Need to include this in the code to show that the I tried it
+```{r}
+model3 = arima(landing_ts, order=c(14,1,0), seasonal = list(order = c(0,1,0), period = 12), method = "ML", fixed = c(NA,NA,NA,NA,NA,NA,NA,0,0,0,0,0,0,NA))
+model3
+AICc(model3)
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,-1.5022,-1.7596,-1.5529,-1.3036,-1.0724,-0.7035,-0.3185,0,0,0,0,0,0,-0.2220))
+roots_AR = c("Root 1", "Root 2","Root 3","Root 4", "Root 5","Root 6","Root 7", "Root 8","Root 9","Root 10", "Root 11","Root 12","Root 13", "Root 14")
+root_model3 = data.frame(Root = roots_AR, Value = AR)
+kable(root_model3, caption = "Phi(B) Roots")
+```
+
+# Model 4
+
+SARIMA (27,1,0)x(0,1,0) 12
+
+```{r}
+model4 = arima(landing_ts, order=c(27,1,0), seasonal = list(order = c(0,1,0), period = 12), method = "ML")
+model4
+AICc(model4)
+```
+
+
+
+
+
+
+
+
+##### MODELS WITH ONLY TREND DIFFERENCE
+
+
+## NOT USED IN THE REPORT
+
+```{r}
+load(file="Data/landings_transformed_no_season.Rdata")
+landing_ts_ns = landings_transformed_no_season$pounds_transformed
+```
+
+MODEL 21
+```{r}
+# THIS WORKS, BUT PROBABLY NOT A GREAT MODEL
+model21 = arima(landing_ts_ns, order=c(2,1,1), method = "ML")
+model21
+AICc(model21)
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,-0.6605))
+roots_AR = c("Root 1")
+root_model21 = data.frame(Root = roots_AR, Value = AR)
+kable(root_model21, caption = "Phi(B) Roots")
+```
+MODEL 22
+```{r}
+# Revised Model based on Residual PACF
+model22 = arima(landing_ts_ns, order=c(15,1,0), method = "ML")
+model22
+AICc(model22)
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,1.7032,2.0569,2.1340,2.1507,2.2627,2.4141,2.5125,2.4864,2.3683,2.1207,1.7952,1.3713,0.9685,0.6628,0.2976))
+AR_df = data.frame(Root = seq(1,15,by=1),
+                   real = Re(AR), im = Im(AR))
+AR_df = 
+  AR_df %>%
+  mutate(z = sqrt(real^2 + im^2))
+paste0("Smallest Root on Complex Plane: ",min(AR_df$z))
+kable(AR_df, caption = "Phi(B) Roots")
+```
+
+MODEL 23
+```{r}
+model23 = auto.arima(
+  landing_ts_ns,
+  d = 1,
+  max.p = 20,
+  max.q = 20,
+  max.P = 2,
+  max.Q = 2,
+  max.order = 50,
+  max.D = 1,
+  start.p = 0,
+  start.q = 0,
+  start.P = 0,
+  start.Q = 0,
+  stationary = FALSE)
+
+model23
+```
+
+MODEL 24
+```{r}
+# NOT STATIONARY
+model24 = arima(landing_ts_ns, order=c(3,1,0), method = "ML")
+model24
+AICc(model24)
+
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,1.2063,0.8988,0.3598))
+roots_AR = c("Root 1", "Root 2","Root 3")
+root_model8 = data.frame(Root = roots_AR, Value = AR)
+kable(root_model8, caption = "Theta(B) Roots")
+
+acf(residuals(model24))
+pacf(residuals(model24))
+```
+
+
+```{r}
+# Non Stationary
+model9 = arima(landing_ts, order=c(2,1,0), method = "ML")
+model9
+AICc(model9)
+
+# Phi (corresponsing to AR)
+AR = polyroot(c(1,-1.0559,-0.5322))
+roots_AR = c("Root 1","Root2")
+root_model9 = data.frame(Root = roots_AR, Value = AR)
+kable(root_model9, caption = "Phi(B) Roots")
+```
