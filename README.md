@@ -2,4 +2,4 @@
 Analyzing and Forecasting Monthly Red Sea Urchin Landings in Santa Barbara from 2008 to 2019
 
 
-This is an incomplete project. It was originally completed for PSTAT 274 Final Project Credit. However there is an issue with part of the analysis and the related report. The project is being updated.
+This project has now been updated as of January 2023 to fix some issues with the code in the original submission. The project report available online is the final version with the corrections. If the prior (incorrect) version of the project is needed, please contact me.
