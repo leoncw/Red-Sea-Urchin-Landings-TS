@@ -28,11 +28,16 @@ library(TSA) #Using
 ###### SEASON ONLY MODEL #####
 
 ```{r}
-load(file="Data/landings_transformed_season_only.Rdata")
-landing_ts_so = landings_transformed_season_only$pounds_transformed
+# Not used
+#load(file="Data/landings_transformed_season_only.Rdata")
+#landing_ts_so = landings_transformed_season_only$pounds_transformed
 
+# training data
 load(file="Data/landings.Rdata")
 landings_ts = landings$pounds
+
+# Full time frame, including prediction
+load(file="Data/landings_full.Rdata")
 ```
 
 # Used in the Report #
@@ -88,9 +93,9 @@ forecast_plot = ggplot() +
 forecast_plot
 
 # Plot Forecast
-#png(filename = "Images/forecast.png", width = 960, height = 480)
+png(filename = "Images/forecast.png", width = 960, height = 480)
 forecast_plot
-#dev.off()
+dev.off()
 ```
 
 

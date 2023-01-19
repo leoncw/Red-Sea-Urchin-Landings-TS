@@ -137,9 +137,9 @@ histogram_resid1
 qq_resid_mod1 = qqplot_residuals(residuals(model40))
 
 # Plot All Together
-#png(filename = "Images/diagnostics_mod1.png", width = 960, height = 960)
+# png(filename = "Images/diagnostics_mod1.png", width = 960, height = 960)
 model1_grid = plot_grid(qq_resid_mod1,histogram_resid1,ACF_residual_mod1,PACF_residual_mod1, labels = NULL, label_size = 12, ncol = 2, nrow = 2)
-#dev.off()
+# dev.off()
 
 ```
 
@@ -223,9 +223,9 @@ histogram_resid3 = ggplot(data = hist_df_mod, aes(x = x/1000)) +
 qq_resid_mod3 = qqplot_residuals(residuals(model43))
 
 # Plot All Together
-#png(filename = "Images/diagnostics_mod3.png", width = 960, height = 960)
+png(filename = "Images/diagnostics_mod3.png", width = 960, height = 960)
 plot_grid(qq_resid_mod3,histogram_resid3,ACF_residual_mod3,PACF_residual_mod3, label_size = 12, ncol = 2, nrow = 2)
-#dev.off()
+dev.off()
 
 ```
 
@@ -312,9 +312,10 @@ qq_resid_mod4 = qqplot_residuals(residuals(model44))
 # Plot All Together
 model2_grid = plot_grid(qq_resid_mod4,histogram_resid4,ACF_residual_mod4,PACF_residual_mod4, labels = NULL, label_size = 12, ncol = 2, nrow = 2)
 
-#png(filename = "Images/diagnostics_mod1_2.png", width = 960, height = 720)
+# Plot Models 1 and 2 together
+png(filename = "Images/diagnostics_mod1_2.png", width = 960, height = 720)
 plot_grid(model1_grid,model2_grid, label_size = 12, ncol = 2, nrow = 1, labels = c("Model1","Model2"), label_x = .2)
-#dev.off()
+dev.off()
 ```
 
 

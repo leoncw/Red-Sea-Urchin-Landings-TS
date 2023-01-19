@@ -28,6 +28,7 @@ library(TSA) #Using
 
 ```{r}
 load(file="Data/landings.Rdata")
+landings_ts = landings$pounds
 
 load(file="Data/landings_transformed_season_only.Rdata")
 landing_ts_so = landings_transformed_season_only$pounds_transformed
@@ -79,12 +80,12 @@ dev.off()
 ###### Periodogram of Residuals of Model 3 #####
 ```{r}
 # Model 43 - Model Chosen for Forecasting Final Report. Corresponds to Model 3 of the report.
-model43 = arima(landing_ts_so, order=c(1,0,1), seasonal = list(order = c(1,1,1), period = 12), 
+model43 = arima(landings_ts, order=c(1,0,1), seasonal = list(order = c(1,1,1), period = 12), 
                 method = "ML",fixed = c(NA,NA,NA,NA))
 
 ## Periodogram
 #periodogram = periodogram(landings$pounds, plot = TRUE)
-periodogram = periodogram(residuals(model43), plot = FALSE)
+periodogram = periodogram(residuals(model43))
 
 # Put into Dataframe
 periodogram_df = data.frame(periodogram = periodogram$spec[1:60], frequency = periodogram$freq[1:60])
